@@ -1,40 +1,49 @@
 let key = config.US_API_KEY;
 let url = "https://api.covidactnow.org/v2/country/US.timeseries.json?apiKey=" + key;
 
-const dates = [];
-const countries = [];
-const cases = [];
-const deaths = [];
+const days = getDays();
+let dates = [];
+let countries = [];
+let cases = [];
+let deaths = [];
 
 async function fetchData() {
-    const res = await fetch(url);
-    if (res.status != 200) {
-        console.log("An error occurred with the response.");
-    } else {
-        const record = await res.json();
-        console.log(record.lastUpdatedDate);
-        /*
-        for (let index = 0; index < 7; index++) {
-            console.log(record.actualsTimeseries[index].date);
-        }
-        document.querySelector('#date').innerHTML = record.lastUpdatedDate;
-        document.querySelector('#country').innerHTML = record.country;
-        document.querySelector('#newCases').innerHTML = record.actuals.newCases;
-        document.querySelector('#newDeaths').innerHTML = record.actuals.newDeaths;
+    fetch(url)
+    .then(res => res.json())
+    .then(data => extractData(data));
+}
 
-        document.querySelector('#date1').innerHTML = record.actualsTimeseries[857].date;
-        document.querySelector('#country1').innerHTML = record.country;
-        if (record.actualsTimeseries[857].newCases === null) {
-            document.querySelector('#newCases1').innerHTML = record.actuals.newCases;
+/**
+ * Extracts the data
+ * @param {number} data to extract
+ */
+function extractData(data) {
+    let offset = 1;
+    for (let i = 0; i < 7; i++) {
+        // GET TODAY'S DATA FIRST
+        if (i === 0) {
+            dates.push(data.lastUpdatedDate);
+            countries.push(data.country);
+            cases.push(data.actuals.newCases);
+            deaths.push(data.actuals.newDeaths);
+            continue;
+        } else if (i === 1) {
+            dates.push(data.actualsTimeseries[days].date);
+            cases.push(data.actualsTimeseries[days].newCases);
+            deaths.push(data.actualsTimeseries[days].newDeaths);
+            continue;
         } else {
-            document.querySelector('#newCases1').innerHTML = record.actualsTimeseries[857].newCases;
+            dates.push(data.actualsTimeseries[days - offset].date);
+            cases.push(data.actualsTimeseries[days - offset].newCases);
+            deaths.push(data.actualsTimeseries[days - offset].newDeaths);
+            offset++;
         }
-        if (record.actualsTimeseries[857].newDeaths === null) {
-            document.querySelector('#newDeaths1').innerHTML = record.actuals.newDeaths;
-        } else {
-            document.querySelector('#newDeaths1').innerHTML = record.actualsTimeseries[857].newDeaths;
-        } */
     }
+    // LOG OUR DATA ARRAYS
+    console.log(dates);
+    console.log(countries);
+    console.log(cases);
+    console.log(deaths);
 }
 
 /**
@@ -49,11 +58,12 @@ function getDays() {
 
 /**
  * Updates the table element with a specified number of generated rows with unique ids
- * @param {*} rows 
+ * @param {*} rows to be inserted into the table body
  */
 function updateTable(rows) {
     const numberOfRows = rows;
     const table = document.querySelector('#table-body');
+
     // CREATE / ADD ROWS to TABLE BODY
     for (let index = 0; index < numberOfRows; index++) {
         table.appendChild(createRow(index));
@@ -91,9 +101,11 @@ function populateCells() {
     // if td.id.slice row-#-newDeaths then innerHTML = record.actuals.newDeaths;
 }
 
+/**
+ * Updates the day-counter element with the number of days since the beginning of Covid in the US
+ */
 function updateDayCounter() {
-    const counter = document.querySelector('#day-counter');
-    counter.textContent = getDays();
+    document.querySelector('#day-counter').textContent = days;
 }
 
 /**
@@ -127,8 +139,7 @@ function getProperties() {
     return props;
 }
 
-fetchData();
+fetchData()
+.then(updateDayCounter)
+.then(updateTable(7))
 
-updateDayCounter();
-
-updateTable(7);
