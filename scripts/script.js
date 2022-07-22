@@ -1,29 +1,30 @@
 let key = config.US_API_KEY;
 let url = "https://api.covidactnow.org/v2/country/US.timeseries.json?apiKey=" + key;
 
+const daysToGenerate = 7;
 const days = getDays();
 let dates = [];
-let countries = [];
+let country = null;
 let cases = [];
 let deaths = [];
-
-async function fetchData() {
+async function fetchData(days) {
     fetch(url)
     .then(res => res.json())
-    .then(data => extractData(data));
+    .then(data => extractData(data, days))
+    .then(populateCells);
 }
 
 /**
- * Extracts the data
+ * Extracts the data for the amount of days passed in
  * @param {number} data to extract
  */
-function extractData(data) {
+function extractData(data, daysToGenerate) {
     let offset = 1;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < daysToGenerate; i++) {
         // GET TODAY'S DATA FIRST
         if (i === 0) {
             dates.push(data.lastUpdatedDate);
-            countries.push(data.country);
+            country = data.country;
             cases.push(data.actuals.newCases);
             deaths.push(data.actuals.newDeaths);
             continue;
@@ -39,11 +40,6 @@ function extractData(data) {
             offset++;
         }
     }
-    // LOG OUR DATA ARRAYS
-    console.log(dates);
-    console.log(countries);
-    console.log(cases);
-    console.log(deaths);
 }
 
 /**
@@ -91,14 +87,26 @@ function updateTable(rows) {
 }
 
 function populateCells() {
-    // for each row in table-body
+    // grab the tbody
     const table = document.querySelector('#table-body');
-    // for each td in row
-    const tableRows = Array.prototype.slice.call(table.children);
-    // if td.id.slice row-#-date then innerHTML = record.lastUpdatedDate;
-    // if td.id.slice row-#-country then innerHTML = record.country;
-    // if td.id.slice row-#-newCases then innerHTML = record.actuals.newCases;
-    // if td.id.slice row-#-newDeaths then innerHTML = record.actuals.newDeaths;
+    // grab each row
+    const rows = Array.prototype.slice.call(table.children);
+
+    // for every row, and for every td in that row, change its innerHTML according to its ID
+    Array.from(rows).forEach((row, index) => {
+        const cells = Array.prototype.slice.call(row.children);
+        Array.from(cells).forEach(cell => {
+            if (cell.id === 'row-' + index + '-date') {
+                cell.innerHTML = dates[index];
+            } else if (cell.id === 'row-' + index + '-country'){
+                cell.innerHTML = country;
+            } else if (cell.id === 'row-' + index + '-newCases') {
+                cell.innerHTML = cases[index];
+            } else if (cell.id === 'row-' + index + '-newDeaths') {
+                cell.innerHTML = deaths[index];
+            }
+        });
+    });
 }
 
 /**
@@ -139,7 +147,7 @@ function getProperties() {
     return props;
 }
 
-fetchData()
+// START
+fetchData(daysToGenerate)
 .then(updateDayCounter)
-.then(updateTable(7))
-
+.then(updateTable(daysToGenerate));
